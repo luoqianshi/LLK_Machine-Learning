@@ -1,5 +1,6 @@
 # 数据目录
 data/
+results/
 
 # Python相关
 __pycache__/
