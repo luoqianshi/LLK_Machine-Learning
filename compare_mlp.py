@@ -17,68 +17,6 @@ import seaborn as sns
 from MLP_Numpy import MLP
 from MLP_sklearn import MLP_sklearn
 
-def check_chinese_font():
-    """
-    检查并设置中文字体
-    """
-    # 优先使用的中文字体列表
-    chinese_fonts = ['SimHei']
-    
-    # 获取系统所有字体
-    font_list = [f.name for f in fm.fontManager.ttflist]
-    
-    # 查找可用的中文字体
-    available_font = None
-    for font in chinese_fonts:
-        if font in font_list:
-            available_font = font
-            break
-    
-    if available_font is None:
-        print("警告：未找到合适的中文字体，将使用默认字体")
-        return False
-    
-    # 设置找到的中文字体
-    plt.rcParams['font.sans-serif'] = [available_font] + plt.rcParams['font.sans-serif']
-    plt.rcParams['axes.unicode_minus'] = False
-    return True
-
-# 设置matplotlib的字体和样式
-def setup_plot_style():
-    """
-    设置matplotlib的绘图样式和字体
-    """
-    # 检查并设置中文字体
-    has_chinese_font = check_chinese_font()
-    
-    # 设置全局字体大小
-    plt.rcParams['font.size'] = 12
-    plt.rcParams['axes.titlesize'] = 14
-    plt.rcParams['axes.labelsize'] = 12
-    plt.rcParams['xtick.labelsize'] = 10
-    plt.rcParams['ytick.labelsize'] = 10
-    plt.rcParams['legend.fontsize'] = 10
-    
-    # 设置图表样式
-    sns.set_style("whitegrid")  # 使用seaborn的样式
-    sns.set_context("notebook", font_scale=1.2)  # 设置seaborn的上下文
-    
-    # 设置图表大小和DPI
-    plt.rcParams['figure.figsize'] = [10, 6]
-    plt.rcParams['figure.dpi'] = 100
-    
-    # 设置网格样式
-    plt.rcParams['grid.linestyle'] = '--'
-    plt.rcParams['grid.alpha'] = 0.3
-    
-    # 设置颜色主题
-    sns.set_palette("husl")
-    
-    return has_chinese_font
-
-# 在程序开始时调用设置函数
-has_chinese_font = setup_plot_style()
-
 # 设置随机种子以确保结果可复现
 np.random.seed(42)
 torch.manual_seed(42)
@@ -239,21 +177,20 @@ def compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one
     # 创建结果保存目录
     current_time, base_dir, numpy_dir, sklearn_dir = create_result_dirs()
     
-    # 使用小一点的数据子集进行训练，以加快速度
-    subset_size = 5000
-    X_train_subset = X_train[:subset_size]
-    y_train_subset = y_train[:subset_size]
-    y_train_one_hot_subset = y_train_one_hot[:subset_size]
+    # 使用完整的训练集
+    X_train_full = X_train
+    y_train_full = y_train
+    y_train_one_hot_full = y_train_one_hot
     
     # 共同参数
     layer_sizes = [784, 128, 64, 10]
     activation_functions = ['relu', 'relu', 'softmax']
-    learning_rate = 0.01
+    learning_rate = 0.001  # 保持较小的学习率以确保稳定性
     
     # 结果字典
     results = {
-        'custom_mlp': {'train_time': 0, 'metrics': None},
-        'sklearn_mlp': {'train_time': 0, 'metrics': None}
+        'custom_mlp': {'train_time': 0, 'metrics': None, 'history': None},
+        'sklearn_mlp': {'train_time': 0, 'metrics': None, 'history': None}
     }
     
     # ==== 自定义MLP ====
@@ -271,25 +208,9 @@ def compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one
     # 记录开始时间
     start_time = time.time()
     
-    # 训练模型
-    for epoch in range(epochs):
-        # 每次迭代随机选择一个小批量
-        indices = np.random.choice(subset_size, 64, replace=False)
-        batch_X = X_train_subset[indices]
-        batch_y = y_train_one_hot_subset[indices]
-        
-        # 前向传播
-        y_pred = custom_mlp.forward(batch_X)
-        
-        # 计算损失
-        loss = custom_mlp.calculate_loss(y_pred, batch_y)
-        
-        # 反向传播和更新参数
-        weight_gradients, bias_gradients = custom_mlp.backward(batch_X, batch_y)
-        custom_mlp.update_parameters(weight_gradients, bias_gradients)
-        
-        if (epoch + 1) % 2 == 0 or epoch == 0:
-            print(f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.4f}")
+    # 训练模型并获取历史记录
+    history = custom_mlp.train(X_train_full, y_train_one_hot_full, epochs=epochs, batch_size=256, verbose=True)
+    results['custom_mlp']['history'] = history
     
     # 记录训练时间
     results['custom_mlp']['train_time'] = time.time() - start_time
@@ -316,8 +237,9 @@ def compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one
     # 记录开始时间
     start_time = time.time()
     
-    # 训练模型
-    sklearn_mlp.train(X_train_subset, y_train_subset, epochs=epochs, batch_size=64, verbose=True)
+    # 训练模型并获取历史记录
+    history = sklearn_mlp.train(X_train_full, y_train_full, epochs=epochs, batch_size=256, verbose=True)
+    results['sklearn_mlp']['history'] = history
     
     # 记录训练时间
     results['sklearn_mlp']['train_time'] = time.time() - start_time
@@ -357,14 +279,27 @@ def visualize_results(results, current_time):
         f1_label = 'F1 Score' # F1分数
         time_label = 'Time (s)' # 时间(秒)
         
-        # 准确率、精确率、召回率、F1分数对比
+        # 性能指标对比（柱状图）
         plt.subplot(2, 2, 1)
         x = np.arange(len(models))
         width = 0.2
+        
+        # 绘制柱状图
         plt.bar(x - width*1.5, accuracies, width, label=accuracy_label, color='#2ecc71')
         plt.bar(x - width*0.5, precisions, width, label=precision_label, color='#3498db')
         plt.bar(x + width*0.5, recalls, width, label=recall_label, color='#e74c3c')
         plt.bar(x + width*1.5, f1_scores, width, label=f1_label, color='#f1c40f')
+        
+        # 添加数值标签
+        for i, v in enumerate(accuracies):
+            plt.text(i - width*1.5, v, f'{v:.4f}', ha='center', va='bottom')
+        for i, v in enumerate(precisions):
+            plt.text(i - width*0.5, v, f'{v:.4f}', ha='center', va='bottom')
+        for i, v in enumerate(recalls):
+            plt.text(i + width*0.5, v, f'{v:.4f}', ha='center', va='bottom')
+        for i, v in enumerate(f1_scores):
+            plt.text(i + width*1.5, v, f'{v:.4f}', ha='center', va='bottom')
+        
         plt.title('Model Performance Metrics', pad=20) # 模型性能指标对比
         plt.xticks(x, models)
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
@@ -387,6 +322,43 @@ def visualize_results(results, current_time):
         
         plt.tight_layout()
         plt.savefig(os.path.join(base_dir, 'performance_comparison.png'), 
+                   dpi=300, 
+                   bbox_inches='tight')
+        plt.close()
+        
+        # 绘制训练历史曲线
+        plt.figure(figsize=(15, 5))
+        
+        # 损失函数曲线
+        plt.subplot(1, 2, 1)
+        for model in models:
+            history = results[model]['history']
+            epochs = range(0, len(history['loss']) * 2, 2)  # 每2个epoch记录一次
+            plt.plot(epochs, history['loss'], 
+                    label=f'{model} Loss',
+                    linewidth=2)
+        plt.title('Training Loss Curves')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.grid(True, linestyle='--', alpha=0.7)
+        
+        # 准确率曲线
+        plt.subplot(1, 2, 2)
+        for model in models:
+            history = results[model]['history']
+            epochs = range(0, len(history['accuracy']) * 2, 2)  # 每2个epoch记录一次
+            plt.plot(epochs, history['accuracy'], 
+                    label=f'{model} Accuracy',
+                    linewidth=2)
+        plt.title('Training Accuracy Curves')
+        plt.xlabel('Epoch')
+        plt.ylabel('Accuracy')
+        plt.legend()
+        plt.grid(True, linestyle='--', alpha=0.7)
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(base_dir, 'training_history.png'), 
                    dpi=300, 
                    bbox_inches='tight')
         plt.close()
@@ -485,7 +457,7 @@ def main():
     X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot = load_mnist_data()
     
     print("\n开始比较两个MLP实现的性能...")
-    results, current_time = compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot, epochs=100)
+    results, current_time = compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot, epochs=10)
     
     # 打印结果摘要
     print_results_summary(results)

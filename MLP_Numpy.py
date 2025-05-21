@@ -176,9 +176,21 @@ class MLP:
         epochs: 训练轮数
         batch_size: 批大小
         verbose: 是否打印训练进度
+        
+        返回:
+        history: 包含训练过程中的损失和准确率的字典
         """
         num_samples = X.shape[0]
         iterations = int(np.ceil(num_samples / batch_size))
+        
+        # 初始化历史记录
+        history = {
+            'loss': [],
+            'accuracy': []
+        }
+        
+        # 根据epochs大小决定打印频率
+        print_freq = 1 if epochs <= 100 else 10
         
         for epoch in range(epochs):
             # 随机打乱数据
@@ -211,8 +223,22 @@ class MLP:
             
             epoch_loss /= num_samples
             
-            if verbose and (epoch + 1) % 10 == 0:
-                print(f"Epoch {epoch + 1}/{epochs}, Loss: {epoch_loss:.4f}")
+            # 计算准确率
+            predictions = self.predict(X)
+            if len(y.shape) > 1 and y.shape[1] > 1:
+                y_labels = np.argmax(y, axis=1)
+            else:
+                y_labels = y
+            accuracy = np.mean(predictions == y_labels)
+            
+            # 记录历史
+            history['loss'].append(epoch_loss)
+            history['accuracy'].append(accuracy)
+            
+            if verbose and (epoch + 1) % print_freq == 0:
+                print(f"Epoch {epoch + 1}/{epochs}, Loss: {epoch_loss:.8f}, Accuracy: {accuracy:.8f}")
+        
+        return history
     
     def predict(self, X):
         """

@@ -35,7 +35,8 @@ class MLP_sklearn:
             alpha=0.0001,  # L2正则化参数，默认值
             batch_size=32, # 默认批大小
             learning_rate_init=learning_rate,
-            max_iter=1,    # 每次调用fit时只训练一轮，让我们可以控制总训练轮数
+            max_iter=1,    # 每次调用fit时只训练一轮
+            early_stopping=False,  # 禁用早停
             warm_start=True,  # 允许继续训练
             random_state=42  # 固定随机种子
         )
@@ -69,6 +70,9 @@ class MLP_sklearn:
         epochs: 训练轮数
         batch_size: 批大小
         verbose: 是否打印训练进度
+        
+        返回:
+        history: 包含训练过程中的损失和准确率的字典
         """
         # 如果y是one-hot编码的，转换为类别索引
         if len(y.shape) > 1 and y.shape[1] > 1:
@@ -80,18 +84,41 @@ class MLP_sklearn:
         # 保存类别信息
         self.classes_ = np.unique(y)
         
+        # 初始化历史记录
+        history = {
+            'loss': [],
+            'accuracy': []
+        }
+        
+        # 根据epochs大小决定打印频率
+        print_freq = 1 if epochs <= 100 else 10
+        
         # 训练模型
         for epoch in range(epochs):
-            self.mlp.fit(X, y)
+            # 随机打乱数据
+            indices = np.random.permutation(len(X))
+            X_shuffled = X[indices]
+            y_shuffled = y[indices]
             
-            if verbose and (epoch + 1) % 10 == 0:
-                # 计算并打印损失
-                y_pred = self.mlp.predict_proba(X)
-                # 转换为one-hot编码以计算损失
-                y_one_hot = np.zeros((y.shape[0], len(self.classes_)))
-                y_one_hot[np.arange(y.shape[0]), y] = 1
-                loss = self.calculate_loss(y_pred, y_one_hot)
-                print(f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.4f}")
+            # 训练一个epoch
+            self.mlp.fit(X_shuffled, y_shuffled)
+            
+            # 计算损失和准确率
+            y_pred = self.mlp.predict_proba(X)
+            # 转换为one-hot编码以计算损失
+            y_one_hot = np.zeros((y.shape[0], len(self.classes_)))
+            y_one_hot[np.arange(y.shape[0]), y] = 1
+            loss = self.calculate_loss(y_pred, y_one_hot)
+            accuracy = self.evaluate(X, y)
+            
+            # 记录历史
+            history['loss'].append(loss)
+            history['accuracy'].append(accuracy)
+            
+            if verbose and (epoch + 1) % print_freq == 0:
+                print(f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.8f}, Accuracy: {accuracy:.8f}")
+        
+        return history
     
     def calculate_loss(self, y_pred, y_true):
         """
