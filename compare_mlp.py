@@ -101,6 +101,7 @@ def create_result_dirs():
 def load_mnist_data():
     """
     加载MNIST数据集并转换为NumPy数组
+    - 其中0.1307和0.3081是MNIST数据集的均值(mean)和标准差(standard deviation)
     """
     # 定义数据变换和加载MNIST数据集
     transform = transforms.Compose([
@@ -211,21 +212,15 @@ def save_results(results, save_dir, model_name):
         sns.set(font_scale=1.2)  # 设置seaborn的字体大小
         
         # 设置标题和标签
-        title = f'{model_name} 混淆矩阵'
-        xlabel = '预测标签'
-        ylabel = '真实标签'
-        
-        # 如果无法显示中文，使用英文标签
-        if not has_chinese_font:
-            title = f'{model_name} Confusion Matrix'
-            xlabel = 'Predicted Label'
-            ylabel = 'True Label'
+        title = f'{model_name} Confusion Matrix'  # 混淆矩阵
+        xlabel = 'Predicted Label'  # 预测标签
+        ylabel = 'True Label'  # 真实标签
         
         sns.heatmap(results['confusion_matrix'], 
                    annot=True, 
                    fmt='d', 
                    cmap='Blues',
-                   cbar_kws={'label': '样本数量' if has_chinese_font else 'Sample Count'})
+                   cbar_kws={'label': 'Sample Count'}) # 样本数量
         plt.title(title, pad=20)
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
@@ -356,11 +351,11 @@ def visualize_results(results, current_time):
         plt.figure(figsize=(15, 10))
         
         # 设置标签
-        accuracy_label = '准确率' if has_chinese_font else 'Accuracy'
-        precision_label = '精确率' if has_chinese_font else 'Precision'
-        recall_label = '召回率' if has_chinese_font else 'Recall'
-        f1_label = 'F1分数' if has_chinese_font else 'F1 Score'
-        time_label = '时间(秒)' if has_chinese_font else 'Time (s)'
+        accuracy_label = 'Accuracy' # 准确率
+        precision_label = 'Precision' # 精确率
+        recall_label = 'Recall' # 召回率
+        f1_label = 'F1 Score' # F1分数
+        time_label = 'Time (s)' # 时间(秒)
         
         # 准确率、精确率、召回率、F1分数对比
         plt.subplot(2, 2, 1)
@@ -370,7 +365,7 @@ def visualize_results(results, current_time):
         plt.bar(x - width*0.5, precisions, width, label=precision_label, color='#3498db')
         plt.bar(x + width*0.5, recalls, width, label=recall_label, color='#e74c3c')
         plt.bar(x + width*1.5, f1_scores, width, label=f1_label, color='#f1c40f')
-        plt.title('模型性能指标对比' if has_chinese_font else 'Model Performance Metrics', pad=20)
+        plt.title('Model Performance Metrics', pad=20) # 模型性能指标对比
         plt.xticks(x, models)
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.ylim(0, 1)
@@ -379,14 +374,14 @@ def visualize_results(results, current_time):
         # 训练时间对比
         plt.subplot(2, 2, 2)
         plt.bar(models, train_times, color=['#2ecc71', '#3498db'])
-        plt.title('训练时间比较' if has_chinese_font else 'Training Time Comparison', pad=20)
+        plt.title('Training Time Comparison', pad=20) # 训练时间比较
         plt.ylabel(time_label)
         plt.grid(True, linestyle='--', alpha=0.7)
         
         # 推理时间对比
         plt.subplot(2, 2, 3)
         plt.bar(models, inference_times, color=['#2ecc71', '#3498db'])
-        plt.title('推理时间比较' if has_chinese_font else 'Inference Time Comparison', pad=20)
+        plt.title('Inference Time Comparison', pad=20) # 推理时间比较
         plt.ylabel(time_label)
         plt.grid(True, linestyle='--', alpha=0.7)
         
@@ -424,6 +419,64 @@ def print_results_summary(results):
     
     print("="*80)
 
+def plot_confusion_matrix(y_true, y_pred, save_dir):
+    """绘制混淆矩阵"""
+    cm = confusion_matrix(y_true, y_pred)
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+    plt.title('Confusion Matrix')
+    plt.xlabel('Predicted Label')
+    plt.ylabel('True Label')
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_dir, 'confusion_matrix.png'))
+    plt.close()
+
+def plot_learning_curves(history, save_dir):
+    """绘制学习曲线"""
+    plt.figure(figsize=(12, 5))
+    
+    plt.subplot(1, 2, 1)
+    plt.plot(history['train_loss'], label='Training Loss')
+    plt.plot(history['val_loss'], label='Validation Loss')
+    plt.title('Loss Curves')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    
+    plt.subplot(1, 2, 2)
+    plt.plot(history['train_acc'], label='Training Accuracy')
+    plt.plot(history['val_acc'], label='Validation Accuracy')
+    plt.title('Accuracy Curves')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_dir, 'learning_curves.png'))
+    plt.close()
+
+def plot_performance_comparison(results, save_dir):
+    """绘制性能对比图"""
+    metrics = ['accuracy', 'precision', 'recall', 'f1_score']
+    models = ['NumPy MLP', 'Sklearn MLP']
+    
+    plt.figure(figsize=(12, 6))
+    x = np.arange(len(metrics))
+    width = 0.35
+    
+    for i, model in enumerate(models):
+        values = [results[model][metric] for metric in metrics]
+        plt.bar(x + i*width, values, width, label=model)
+    
+    plt.title('Model Performance Comparison')
+    plt.xlabel('Metrics')
+    plt.ylabel('Score')
+    plt.xticks(x + width/2, metrics)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_dir, 'performance_comparison.png'))
+    plt.close()
+
 def main():
     """
     主函数
@@ -432,7 +485,7 @@ def main():
     X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot = load_mnist_data()
     
     print("\n开始比较两个MLP实现的性能...")
-    results, current_time = compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot, epochs=10)
+    results, current_time = compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot, epochs=100)
     
     # 打印结果摘要
     print_results_summary(results)
