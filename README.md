@@ -11,6 +11,7 @@
 ├── MLP_Numpy.py          # 基于NumPy的MLP实现
 ├── MLP_sklearn.py        # 基于scikit-learn的MLP实现
 ├── compare_mlp.py        # 模型对比测试脚本
+├── show_dataset.py       # MNIST数据集可视化脚本
 ├── data/                 # MNIST数据集目录
 └── results/              # 结果保存目录
     └── YYYYMMDD_HHMMSS/  # 按时间戳组织的实验结果
@@ -24,7 +25,13 @@
    - 基于NumPy的自定义实现，支持灵活的层结构和激活函数配置
    - 基于scikit-learn的实现，提供标准化的接口
 
-2. 完整的性能评估：
+2. 数据集可视化：
+   - 使用`show_dataset.py`脚本展示MNIST数据集样本
+   - 以10x10网格形式展示100个随机样本
+   - 每个样本上方显示其真实标签
+   - 自动保存高质量可视化结果
+
+3. 完整的性能评估：
    - 准确率（Accuracy）
    - 精确率（Precision）
    - 召回率（Recall）
@@ -33,13 +40,14 @@
    - 训练时间
    - 推理时间
 
-3. 训练过程监控：
+4. 训练过程监控：
    - 根据训练轮数（epochs）动态调整评估频率
    - epochs ≤ 100时，每个epoch都计算和显示性能指标
    - epochs > 100时，每10个epoch计算和显示一次
    - 记录完整的训练历史（loss和accuracy）
 
-4. 可视化功能：
+5. 可视化功能：
+   - MNIST数据集样本展示
    - 训练历史曲线（loss和accuracy）
    - 性能指标对比图
    - 混淆矩阵可视化
@@ -60,7 +68,12 @@
 pip install numpy scikit-learn torch matplotlib seaborn
 ```
 
-2. 运行对比测试：
+2. 查看MNIST数据集样本：
+```bash
+python show_dataset.py
+```
+
+3. 运行对比测试：
 ```bash
 python compare_mlp.py
 ```
@@ -72,6 +85,13 @@ python compare_mlp.py
 - 数据标准化：使用MNIST数据集的均值和标准差
   - 均值：0.1307
   - 标准差：0.3081
+
+### 数据集可视化
+- 随机选择100个样本进行展示
+- 使用灰度图显示
+- 图片大小为15x15英寸
+- 保存为300 DPI的高质量图片
+- 结果保存在`results/mnist_samples.png`
 
 ### 模型配置
 - 网络结构：[784, 128, 64, 10]
@@ -98,10 +118,11 @@ python compare_mlp.py
 ## 结果说明
 
 结果将保存在`results`目录下，按时间戳组织，包含：
-1. 性能指标文本文件
-2. 混淆矩阵图
-3. 训练历史曲线
-4. 性能对比图
+1. MNIST数据集样本展示图
+2. 性能指标文本文件
+3. 混淆矩阵图
+4. 训练历史曲线
+5. 性能对比图
 
 ## 注意事项
 
@@ -116,3 +137,7 @@ python compare_mlp.py
 3. 模型比较：
    - 两个实现使用相同的网络结构和超参数
    - 训练过程完全同步，便于公平比较
+
+4. 数据集可视化：
+   - 每次运行`show_dataset.py`会随机选择不同的样本
+   - 可以通过修改`num_samples`参数调整显示的样本数量
