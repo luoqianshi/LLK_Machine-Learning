@@ -21,7 +21,7 @@ from MLP_sklearn import MLP_sklearn
 np.random.seed(42)
 torch.manual_seed(42)
 
-TRAINING_BATCH_SIZE = 32
+TRAINING_BATCH_SIZE = 256
 
 def create_result_dirs():
     """
@@ -191,8 +191,8 @@ def compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one
     learning_rate = 0.001  # 保持较小的学习率以确保稳定性
     
     # 初始化方法列表
-    # init_methods = ['he', 'random']
-    init_methods = ['random']
+    init_methods = ['he', 'random']
+    # init_methods = ['random']
     
     # 结果字典
     results = {}
@@ -481,7 +481,7 @@ def main():
     X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot = load_mnist_data()
     
     print("\n开始比较两个MLP实现的性能...")
-    results, current_time = compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot, epochs=10)
+    results, current_time = compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot, epochs=50)
     
     # 打印结果摘要
     print_results_summary(results)
