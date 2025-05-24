@@ -32,7 +32,7 @@ class MLP_sklearn:
             hidden_layer_sizes=self.hidden_layer_sizes,
             activation=self.activation,
             solver='sgd',  # 使用随机梯度下降，类似于我们的实现
-            alpha=0.0001,  # L2正则化参数，默认值
+            alpha=0,  # 禁用L2正则化(因为我们的实现中也没有使用)
             batch_size=32, # 默认批大小
             learning_rate_init=learning_rate,
             max_iter=1,    # 每次调用fit时只训练一轮
@@ -42,6 +42,32 @@ class MLP_sklearn:
         )
         
         self.classes_ = None  # 用于存储类别
+        self._is_initialized = False  # 标记是否已初始化
+    
+    def _initialize_weights(self, X):
+        """
+        使用He初始化方法初始化权重
+        与NumPy实现保持一致
+        """
+        if not self._is_initialized:
+            # 使用一个小的数据集触发初始化
+            dummy_y = np.zeros(X.shape[0])
+            self.mlp.fit(X, dummy_y)
+            
+            # 获取模型的权重和偏置
+            weights = self.mlp.coefs_
+            biases = self.mlp.intercepts_
+            
+            # 使用He初始化重新初始化权重
+            for i in range(len(weights)):
+                # 使用与NumPy实现相同的初始化方法
+                weights[i] = np.random.randn(*weights[i].shape) * np.sqrt(2 / self.layer_sizes[i])
+                biases[i] = np.zeros_like(biases[i])
+            
+            # 更新模型的权重和偏置
+            self.mlp.coefs_ = weights
+            self.mlp.intercepts_ = biases
+            self._is_initialized = True
     
     def forward(self, X):
         """
@@ -53,9 +79,9 @@ class MLP_sklearn:
         返回:
         output: 网络的输出
         """
-        # 确保模型已经至少训练过一次
-        if not hasattr(self.mlp, 'classes_'):
-            raise ValueError("模型尚未训练，无法执行前向传播")
+        # 确保模型已经初始化
+        if not self._is_initialized:
+            self._initialize_weights(X)
         
         # 使用sklearn的predict_proba来获取概率输出
         return self.mlp.predict_proba(X)

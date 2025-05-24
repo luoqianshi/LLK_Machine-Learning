@@ -20,7 +20,7 @@ class MLP:
         self.biases = []
         
         for i in range(self.num_layers):
-            # 使用He初始化权重
+            # 使用He初始化权重（由何凯明提出）
             weight = np.random.randn(layer_sizes[i], layer_sizes[i+1]) * np.sqrt(2 / layer_sizes[i])
             bias = np.zeros((1, layer_sizes[i+1]))
             
@@ -120,7 +120,7 @@ class MLP:
         weight_gradients = [np.zeros_like(w) for w in self.weights]
         bias_gradients = [np.zeros_like(b) for b in self.biases]
         
-        # 对于softmax+交叉熵，输出层的误差计算可以简化
+        # 对于softmax+交叉熵，输出层的误差计算可以简化（特殊！）
         output_error = self.activations[-1] - y
         
         # 从最后一层开始，反向计算每一层的误差和梯度
@@ -163,6 +163,7 @@ class MLP:
         """
         # 交叉熵损失
         epsilon = 1e-15  # 避免log(0)
+        # clip为[epsilon, 1-epsilon]之间, 避免log(0)
         y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
         return -np.mean(np.sum(y_true * np.log(y_pred), axis=1))
     
@@ -181,6 +182,7 @@ class MLP:
         history: 包含训练过程中的损失和准确率的字典
         """
         num_samples = X.shape[0]
+        # ceil 向上取整; 计算每个epoch需要迭代的次数
         iterations = int(np.ceil(num_samples / batch_size))
         
         # 初始化历史记录

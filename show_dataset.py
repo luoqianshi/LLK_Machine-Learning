@@ -21,7 +21,7 @@ def load_mnist_data():
     
     return train_dataset
 
-def show_mnist_samples(dataset, num_samples=100):
+def show_mnist_samples(dataset, num_samples=10):
     """
     展示MNIST数据集的样本
     Args:
@@ -29,10 +29,10 @@ def show_mnist_samples(dataset, num_samples=100):
         num_samples: 要展示的样本数量（默认为100，即10x10的网格）
     """
     # 创建10x10的子图
-    fig, axes = plt.subplots(10, 10, figsize=(15, 15))
-    fig.suptitle('MNIST Dataset Samples', fontsize=16)
+    fig, axes = plt.subplots(2, 2, figsize=(15, 15))
+    # fig.suptitle('MNIST Dataset Samples', fontsize=16)
     
-    # 随机选择100个样本
+    # 随机选择10个样本
     indices = np.random.choice(len(dataset), num_samples, replace=False)
     
     for idx, ax in enumerate(axes.flat):
@@ -47,7 +47,7 @@ def show_mnist_samples(dataset, num_samples=100):
             ax.imshow(image, cmap='gray')
             
             # 设置标题为标签
-            ax.set_title(f'True Label: {label}', fontsize=10)
+            ax.set_title(f'True Label: {label}', fontsize=25)
             
             # 移除坐标轴
             ax.axis('off')
@@ -59,7 +59,7 @@ def show_mnist_samples(dataset, num_samples=100):
     os.makedirs('results', exist_ok=True)
     
     # 保存图像
-    plt.savefig('results/mnist_samples.png', dpi=300, bbox_inches='tight')
+    plt.savefig('results/mnist_samples_2x2.png', dpi=300, bbox_inches='tight')
     plt.close()
 
 def main():

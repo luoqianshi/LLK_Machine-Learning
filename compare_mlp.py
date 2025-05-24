@@ -21,6 +21,8 @@ from MLP_sklearn import MLP_sklearn
 np.random.seed(42)
 torch.manual_seed(42)
 
+TRAINING_BATCH_SIZE = 256
+
 def create_result_dirs():
     """
     创建结果保存目录
@@ -52,6 +54,7 @@ def load_mnist_data():
     test_dataset = datasets.MNIST('./data', train=False, transform=transform)
 
     # 创建数据加载器
+    # 这些batch_size只用于数据加载和预处理，不影响模型训练
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1000, shuffle=False)
 
@@ -209,7 +212,7 @@ def compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one
     start_time = time.time()
     
     # 训练模型并获取历史记录
-    history = custom_mlp.train(X_train_full, y_train_one_hot_full, epochs=epochs, batch_size=256, verbose=True)
+    history = custom_mlp.train(X_train_full, y_train_one_hot_full, epochs=epochs, batch_size=TRAINING_BATCH_SIZE, verbose=True)
     results['custom_mlp']['history'] = history
     
     # 记录训练时间
@@ -238,7 +241,7 @@ def compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one
     start_time = time.time()
     
     # 训练模型并获取历史记录
-    history = sklearn_mlp.train(X_train_full, y_train_full, epochs=epochs, batch_size=256, verbose=True)
+    history = sklearn_mlp.train(X_train_full, y_train_full, epochs=epochs, batch_size=TRAINING_BATCH_SIZE, verbose=True)
     results['sklearn_mlp']['history'] = history
     
     # 记录训练时间
@@ -333,7 +336,7 @@ def visualize_results(results, current_time):
         plt.subplot(1, 2, 1)
         for model in models:
             history = results[model]['history']
-            epochs = range(0, len(history['loss']) * 2, 2)  # 每2个epoch记录一次
+            epochs = range(0, len(history['loss']))
             plt.plot(epochs, history['loss'], 
                     label=f'{model} Loss',
                     linewidth=2)
@@ -347,7 +350,7 @@ def visualize_results(results, current_time):
         plt.subplot(1, 2, 2)
         for model in models:
             history = results[model]['history']
-            epochs = range(0, len(history['accuracy']) * 2, 2)  # 每2个epoch记录一次
+            epochs = range(0, len(history['accuracy']))
             plt.plot(epochs, history['accuracy'], 
                     label=f'{model} Accuracy',
                     linewidth=2)
@@ -457,7 +460,7 @@ def main():
     X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot = load_mnist_data()
     
     print("\n开始比较两个MLP实现的性能...")
-    results, current_time = compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot, epochs=10)
+    results, current_time = compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot, epochs=1000)
     
     # 打印结果摘要
     print_results_summary(results)
