@@ -1,7 +1,7 @@
 import numpy as np
 
 class MLP:
-    def __init__(self, layer_sizes, activation_functions, learning_rate=0.01):
+    def __init__(self, layer_sizes, activation_functions, learning_rate=0.01, init_method='he'):
         """
         初始化多层感知机
         
@@ -9,19 +9,26 @@ class MLP:
         layer_sizes: 一个列表，包含每层的神经元数量，例如[784, 128, 64, 10]表示输入层784个神经元，两个隐藏层分别有128和64个神经元，输出层10个神经元
         activation_functions: 一个列表，包含每层的激活函数，例如['relu', 'relu', 'softmax']
         learning_rate: 学习率
+        init_method: 初始化方法，可选 'he' 或 'random'
         """
         self.layer_sizes = layer_sizes
         self.num_layers = len(layer_sizes) - 1  # 不包括输入层
         self.activation_functions = activation_functions
         self.learning_rate = learning_rate
+        self.init_method = init_method
         
         # 初始化权重和偏置
         self.weights = []
         self.biases = []
         
         for i in range(self.num_layers):
-            # 使用He初始化权重（由何凯明提出）
-            weight = np.random.randn(layer_sizes[i], layer_sizes[i+1]) * np.sqrt(2 / layer_sizes[i])
+            if self.init_method == 'he':
+                # 使用He初始化权重（由何凯明提出）
+                weight = np.random.randn(layer_sizes[i], layer_sizes[i+1]) * np.sqrt(2 / layer_sizes[i])
+            else:  # random
+                # 使用随机初始化
+                weight = np.random.randn(layer_sizes[i], layer_sizes[i+1]) * 0.01
+            
             bias = np.zeros((1, layer_sizes[i+1]))
             
             self.weights.append(weight)

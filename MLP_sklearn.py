@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.neural_network import MLPClassifier
 
 class MLP_sklearn:
-    def __init__(self, layer_sizes, activation_functions, learning_rate=0.01):
+    def __init__(self, layer_sizes, activation_functions, learning_rate=0.01, init_method='he'):
         """
         初始化基于sklearn的多层感知机
         
@@ -13,11 +13,13 @@ class MLP_sklearn:
         layer_sizes: 一个列表，包含每层的神经元数量，例如[784, 128, 64, 10]表示输入层784个神经元，两个隐藏层分别有128和64个神经元，输出层10个神经元
         activation_functions: 一个列表，包含每层的激活函数，例如['relu', 'relu', 'softmax']
         learning_rate: 学习率
+        init_method: 初始化方法，可选 'he' 或 'random'
         """
         self.layer_sizes = layer_sizes
         self.hidden_layer_sizes = layer_sizes[1:-1]  # sklearn只需要隐藏层大小
         self.activation_functions = activation_functions
         self.learning_rate = learning_rate
+        self.init_method = init_method
         
         # sklearn MLP 只支持所有隐藏层使用相同的激活函数
         # 我们取第一个激活函数作为所有隐藏层的激活函数
@@ -46,7 +48,7 @@ class MLP_sklearn:
     
     def _initialize_weights(self, X):
         """
-        使用He初始化方法初始化权重
+        使用指定的初始化方法初始化权重
         与NumPy实现保持一致
         """
         if not self._is_initialized:
@@ -58,10 +60,14 @@ class MLP_sklearn:
             weights = self.mlp.coefs_
             biases = self.mlp.intercepts_
             
-            # 使用He初始化重新初始化权重
+            # 使用指定的初始化方法重新初始化权重
             for i in range(len(weights)):
-                # 使用与NumPy实现相同的初始化方法
-                weights[i] = np.random.randn(*weights[i].shape) * np.sqrt(2 / self.layer_sizes[i])
+                if self.init_method == 'he':
+                    # 使用He初始化
+                    weights[i] = np.random.randn(*weights[i].shape) * np.sqrt(2 / self.layer_sizes[i])
+                else:  # random
+                    # 使用随机初始化
+                    weights[i] = np.random.randn(*weights[i].shape) * 0.01
                 biases[i] = np.zeros_like(biases[i])
             
             # 更新模型的权重和偏置

@@ -21,7 +21,7 @@ from MLP_sklearn import MLP_sklearn
 np.random.seed(42)
 torch.manual_seed(42)
 
-TRAINING_BATCH_SIZE = 256
+TRAINING_BATCH_SIZE = 32
 
 def create_result_dirs():
     """
@@ -190,69 +190,84 @@ def compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one
     activation_functions = ['relu', 'relu', 'softmax']
     learning_rate = 0.001  # 保持较小的学习率以确保稳定性
     
+    # 初始化方法列表
+    # init_methods = ['he', 'random']
+    init_methods = ['random']
+    
     # 结果字典
-    results = {
-        'custom_mlp': {'train_time': 0, 'metrics': None, 'history': None},
-        'sklearn_mlp': {'train_time': 0, 'metrics': None, 'history': None}
-    }
+    results = {}
     
-    # ==== 自定义MLP ====
-    print("\n" + "="*50)
-    print("训练自定义MLP模型...")
-    print("="*50)
-    
-    # 创建自定义MLP模型
-    custom_mlp = MLP(
-        layer_sizes=layer_sizes,
-        activation_functions=activation_functions,
-        learning_rate=learning_rate
-    )
-    
-    # 记录开始时间
-    start_time = time.time()
-    
-    # 训练模型并获取历史记录
-    history = custom_mlp.train(X_train_full, y_train_one_hot_full, epochs=epochs, batch_size=TRAINING_BATCH_SIZE, verbose=True)
-    results['custom_mlp']['history'] = history
-    
-    # 记录训练时间
-    results['custom_mlp']['train_time'] = time.time() - start_time
-    
-    # 评估模型
-    numpy_metrics = evaluate_model(custom_mlp, X_test, y_test, y_test_one_hot, "numpy")
-    results['custom_mlp']['metrics'] = numpy_metrics
-    
-    # 保存结果
-    save_results(numpy_metrics, numpy_dir, "NumPy MLP")
-    
-    # ==== Sklearn MLP ====
-    print("\n" + "="*50)
-    print("训练Sklearn MLP模型...")
-    print("="*50)
-    
-    # 创建sklearn MLP模型
-    sklearn_mlp = MLP_sklearn(
-        layer_sizes=layer_sizes,
-        activation_functions=activation_functions,
-        learning_rate=learning_rate
-    )
-    
-    # 记录开始时间
-    start_time = time.time()
-    
-    # 训练模型并获取历史记录
-    history = sklearn_mlp.train(X_train_full, y_train_full, epochs=epochs, batch_size=TRAINING_BATCH_SIZE, verbose=True)
-    results['sklearn_mlp']['history'] = history
-    
-    # 记录训练时间
-    results['sklearn_mlp']['train_time'] = time.time() - start_time
-    
-    # 评估模型
-    sklearn_metrics = evaluate_model(sklearn_mlp, X_test, y_test, y_test_one_hot, "sklearn")
-    results['sklearn_mlp']['metrics'] = sklearn_metrics
-    
-    # 保存结果
-    save_results(sklearn_metrics, sklearn_dir, "Sklearn MLP")
+    for init_method in init_methods:
+        # 为每种初始化方法创建子目录
+        numpy_subdir = os.path.join(numpy_dir, init_method)
+        sklearn_subdir = os.path.join(sklearn_dir, init_method)
+        os.makedirs(numpy_subdir, exist_ok=True)
+        os.makedirs(sklearn_subdir, exist_ok=True)
+        
+        results[init_method] = {
+            'custom_mlp': {'train_time': 0, 'metrics': None, 'history': None},
+            'sklearn_mlp': {'train_time': 0, 'metrics': None, 'history': None}
+        }
+        
+        # ==== 自定义MLP ====
+        print(f"\n" + "="*50)
+        print(f"训练自定义MLP模型 (初始化方法: {init_method})...")
+        print("="*50)
+        
+        # 创建自定义MLP模型
+        custom_mlp = MLP(
+            layer_sizes=layer_sizes,
+            activation_functions=activation_functions,
+            learning_rate=learning_rate,
+            init_method=init_method
+        )
+        
+        # 记录开始时间
+        start_time = time.time()
+        
+        # 训练模型并获取历史记录
+        history = custom_mlp.train(X_train_full, y_train_one_hot_full, epochs=epochs, batch_size=TRAINING_BATCH_SIZE, verbose=True)
+        results[init_method]['custom_mlp']['history'] = history
+        
+        # 记录训练时间
+        results[init_method]['custom_mlp']['train_time'] = time.time() - start_time
+        
+        # 评估模型
+        numpy_metrics = evaluate_model(custom_mlp, X_test, y_test, y_test_one_hot, "numpy")
+        results[init_method]['custom_mlp']['metrics'] = numpy_metrics
+        
+        # 保存结果
+        save_results(numpy_metrics, numpy_subdir, f"NumPy MLP ({init_method})")
+        
+        # ==== Sklearn MLP ====
+        print(f"\n" + "="*50)
+        print(f"训练Sklearn MLP模型 (初始化方法: {init_method})...")
+        print("="*50)
+        
+        # 创建sklearn MLP模型
+        sklearn_mlp = MLP_sklearn(
+            layer_sizes=layer_sizes,
+            activation_functions=activation_functions,
+            learning_rate=learning_rate,
+            init_method=init_method
+        )
+        
+        # 记录开始时间
+        start_time = time.time()
+        
+        # 训练模型并获取历史记录
+        history = sklearn_mlp.train(X_train_full, y_train_full, epochs=epochs, batch_size=TRAINING_BATCH_SIZE, verbose=True)
+        results[init_method]['sklearn_mlp']['history'] = history
+        
+        # 记录训练时间
+        results[init_method]['sklearn_mlp']['train_time'] = time.time() - start_time
+        
+        # 评估模型
+        sklearn_metrics = evaluate_model(sklearn_mlp, X_test, y_test, y_test_one_hot, "sklearn")
+        results[init_method]['sklearn_mlp']['metrics'] = sklearn_metrics
+        
+        # 保存结果
+        save_results(sklearn_metrics, sklearn_subdir, f"Sklearn MLP ({init_method})")
     
     return results, current_time
 
@@ -263,108 +278,112 @@ def visualize_results(results, current_time):
     try:
         base_dir = os.path.join("results", current_time)
         
-        # 1. 准确率比较
-        models = list(results.keys())
-        accuracies = [results[model]['metrics']['accuracy'] for model in models]
-        precisions = [results[model]['metrics']['precision'] for model in models]
-        recalls = [results[model]['metrics']['recall'] for model in models]
-        f1_scores = [results[model]['metrics']['f1_score'] for model in models]
-        train_times = [results[model]['train_time'] for model in models]
-        inference_times = [results[model]['metrics']['inference_time'] for model in models]
-        
-        # 创建性能指标对比图
-        plt.figure(figsize=(15, 10))
-        
-        # 设置标签
-        accuracy_label = 'Accuracy' # 准确率
-        precision_label = 'Precision' # 精确率
-        recall_label = 'Recall' # 召回率
-        f1_label = 'F1 Score' # F1分数
-        time_label = 'Time (s)' # 时间(秒)
-        
-        # 性能指标对比（柱状图）
-        plt.subplot(2, 2, 1)
-        x = np.arange(len(models))
-        width = 0.2
-        
-        # 绘制柱状图
-        plt.bar(x - width*1.5, accuracies, width, label=accuracy_label, color='#2ecc71')
-        plt.bar(x - width*0.5, precisions, width, label=precision_label, color='#3498db')
-        plt.bar(x + width*0.5, recalls, width, label=recall_label, color='#e74c3c')
-        plt.bar(x + width*1.5, f1_scores, width, label=f1_label, color='#f1c40f')
-        
-        # 添加数值标签
-        for i, v in enumerate(accuracies):
-            plt.text(i - width*1.5, v, f'{v:.4f}', ha='center', va='bottom')
-        for i, v in enumerate(precisions):
-            plt.text(i - width*0.5, v, f'{v:.4f}', ha='center', va='bottom')
-        for i, v in enumerate(recalls):
-            plt.text(i + width*0.5, v, f'{v:.4f}', ha='center', va='bottom')
-        for i, v in enumerate(f1_scores):
-            plt.text(i + width*1.5, v, f'{v:.4f}', ha='center', va='bottom')
-        
-        plt.title('Model Performance Metrics', pad=20) # 模型性能指标对比
-        plt.xticks(x, models)
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-        plt.ylim(0, 1)
-        plt.grid(True, linestyle='--', alpha=0.7)
-        
-        # 训练时间对比
-        plt.subplot(2, 2, 2)
-        plt.bar(models, train_times, color=['#2ecc71', '#3498db'])
-        plt.title('Training Time Comparison', pad=20) # 训练时间比较
-        plt.ylabel(time_label)
-        plt.grid(True, linestyle='--', alpha=0.7)
-        
-        # 推理时间对比
-        plt.subplot(2, 2, 3)
-        plt.bar(models, inference_times, color=['#2ecc71', '#3498db'])
-        plt.title('Inference Time Comparison', pad=20) # 推理时间比较
-        plt.ylabel(time_label)
-        plt.grid(True, linestyle='--', alpha=0.7)
-        
-        plt.tight_layout()
-        plt.savefig(os.path.join(base_dir, 'performance_comparison.png'), 
-                   dpi=300, 
-                   bbox_inches='tight')
-        plt.close()
-        
-        # 绘制训练历史曲线
-        plt.figure(figsize=(15, 5))
-        
-        # 损失函数曲线
-        plt.subplot(1, 2, 1)
-        for model in models:
-            history = results[model]['history']
-            epochs = range(0, len(history['loss']))
-            plt.plot(epochs, history['loss'], 
-                    label=f'{model} Loss',
-                    linewidth=2)
-        plt.title('Training Loss Curves')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.legend()
-        plt.grid(True, linestyle='--', alpha=0.7)
-        
-        # 准确率曲线
-        plt.subplot(1, 2, 2)
-        for model in models:
-            history = results[model]['history']
-            epochs = range(0, len(history['accuracy']))
-            plt.plot(epochs, history['accuracy'], 
-                    label=f'{model} Accuracy',
-                    linewidth=2)
-        plt.title('Training Accuracy Curves')
-        plt.xlabel('Epoch')
-        plt.ylabel('Accuracy')
-        plt.legend()
-        plt.grid(True, linestyle='--', alpha=0.7)
-        
-        plt.tight_layout()
-        plt.savefig(os.path.join(base_dir, 'training_history.png'), 
-                   dpi=300, 
-                   bbox_inches='tight')
-        plt.close()
+        # 为每种初始化方法创建性能对比图
+        for init_method in results.keys():
+            init_dir = os.path.join(base_dir, f"init_{init_method}")
+            os.makedirs(init_dir, exist_ok=True)
+            
+            models = list(results[init_method].keys())
+            accuracies = [results[init_method][model]['metrics']['accuracy'] for model in models]
+            precisions = [results[init_method][model]['metrics']['precision'] for model in models]
+            recalls = [results[init_method][model]['metrics']['recall'] for model in models]
+            f1_scores = [results[init_method][model]['metrics']['f1_score'] for model in models]
+            train_times = [results[init_method][model]['train_time'] for model in models]
+            inference_times = [results[init_method][model]['metrics']['inference_time'] for model in models]
+            
+            # 创建性能指标对比图
+            plt.figure(figsize=(15, 10))
+            
+            # 设置标签
+            accuracy_label = 'Accuracy' # 准确率
+            precision_label = 'Precision' # 精确率
+            recall_label = 'Recall' # 召回率
+            f1_label = 'F1 Score' # F1分数
+            time_label = 'Time (s)' # 时间(秒)
+            
+            # 性能指标对比（柱状图）
+            plt.subplot(2, 2, 1)
+            x = np.arange(len(models))
+            width = 0.2
+            
+            # 绘制柱状图
+            plt.bar(x - width*1.5, accuracies, width, label=accuracy_label, color='#2ecc71')
+            plt.bar(x - width*0.5, precisions, width, label=precision_label, color='#3498db')
+            plt.bar(x + width*0.5, recalls, width, label=recall_label, color='#e74c3c')
+            plt.bar(x + width*1.5, f1_scores, width, label=f1_label, color='#f1c40f')
+            
+            # 添加数值标签
+            for i, v in enumerate(accuracies):
+                plt.text(i - width*1.5, v, f'{v:.4f}', ha='center', va='bottom')
+            for i, v in enumerate(precisions):
+                plt.text(i - width*0.5, v, f'{v:.4f}', ha='center', va='bottom')
+            for i, v in enumerate(recalls):
+                plt.text(i + width*0.5, v, f'{v:.4f}', ha='center', va='bottom')
+            for i, v in enumerate(f1_scores):
+                plt.text(i + width*1.5, v, f'{v:.4f}', ha='center', va='bottom')
+            
+            plt.title(f'Model Performance Metrics ({init_method} initialization)', pad=20)
+            plt.xticks(x, models)
+            plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            plt.ylim(0, 1)
+            plt.grid(True, linestyle='--', alpha=0.7)
+            
+            # 训练时间对比
+            plt.subplot(2, 2, 2)
+            plt.bar(models, train_times, color=['#2ecc71', '#3498db'])
+            plt.title(f'Training Time Comparison ({init_method} initialization)', pad=20)
+            plt.ylabel(time_label)
+            plt.grid(True, linestyle='--', alpha=0.7)
+            
+            # 推理时间对比
+            plt.subplot(2, 2, 3)
+            plt.bar(models, inference_times, color=['#2ecc71', '#3498db'])
+            plt.title(f'Inference Time Comparison ({init_method} initialization)', pad=20)
+            plt.ylabel(time_label)
+            plt.grid(True, linestyle='--', alpha=0.7)
+            
+            plt.tight_layout()
+            plt.savefig(os.path.join(init_dir, 'performance_comparison.png'), 
+                       dpi=300, 
+                       bbox_inches='tight')
+            plt.close()
+            
+            # 绘制训练历史曲线
+            plt.figure(figsize=(15, 5))
+            
+            # 损失函数曲线
+            plt.subplot(1, 2, 1)
+            for model in models:
+                history = results[init_method][model]['history']
+                epochs = range(0, len(history['loss']))
+                plt.plot(epochs, history['loss'], 
+                        label=f'{model} Loss',
+                        linewidth=2)
+            plt.title(f'Training Loss Curves ({init_method} initialization)')
+            plt.xlabel('Epoch')
+            plt.ylabel('Loss')
+            plt.legend()
+            plt.grid(True, linestyle='--', alpha=0.7)
+            
+            # 准确率曲线
+            plt.subplot(1, 2, 2)
+            for model in models:
+                history = results[init_method][model]['history']
+                epochs = range(0, len(history['accuracy']))
+                plt.plot(epochs, history['accuracy'], 
+                        label=f'{model} Accuracy',
+                        linewidth=2)
+            plt.title(f'Training Accuracy Curves ({init_method} initialization)')
+            plt.xlabel('Epoch')
+            plt.ylabel('Accuracy')
+            plt.legend()
+            plt.grid(True, linestyle='--', alpha=0.7)
+            
+            plt.tight_layout()
+            plt.savefig(os.path.join(init_dir, 'training_history.png'), 
+                       dpi=300, 
+                       bbox_inches='tight')
+            plt.close()
         
         print(f"\n结果已保存到目录: {base_dir}")
         
@@ -376,23 +395,25 @@ def print_results_summary(results):
     """
     以表格形式打印结果摘要
     """
-    print("\n" + "="*80)
+    print("\n" + "="*100)
     print("性能比较摘要")
-    print("="*80)
-    print(f"{'模型':<20}{'准确率':<10}{'精确率':<10}{'召回率':<10}{'F1分数':<10}{'训练时间(秒)':<15}{'推理时间(秒)':<15}")
-    print("-"*80)
+    print("="*100)
+    print(f"{'初始化方法':<10}{'模型':<20}{'准确率':<10}{'精确率':<10}{'召回率':<10}{'F1分数':<10}{'训练时间(秒)':<15}{'推理时间(秒)':<15}")
+    print("-"*100)
     
-    for model_name, model_results in results.items():
-        metrics = model_results['metrics']
-        print(f"{model_name:<20}"
-              f"{metrics['accuracy']:<10.4f}"
-              f"{metrics['precision']:<10.4f}"
-              f"{metrics['recall']:<10.4f}"
-              f"{metrics['f1_score']:<10.4f}"
-              f"{model_results['train_time']:<15.2f}"
-              f"{metrics['inference_time']:<15.2f}")
+    for init_method, init_results in results.items():
+        for model_name, model_results in init_results.items():
+            metrics = model_results['metrics']
+            print(f"{init_method:<10}"
+                  f"{model_name:<20}"
+                  f"{metrics['accuracy']:<10.4f}"
+                  f"{metrics['precision']:<10.4f}"
+                  f"{metrics['recall']:<10.4f}"
+                  f"{metrics['f1_score']:<10.4f}"
+                  f"{model_results['train_time']:<15.2f}"
+                  f"{metrics['inference_time']:<15.2f}")
     
-    print("="*80)
+    print("="*100)
 
 def plot_confusion_matrix(y_true, y_pred, save_dir):
     """绘制混淆矩阵"""
@@ -460,7 +481,7 @@ def main():
     X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot = load_mnist_data()
     
     print("\n开始比较两个MLP实现的性能...")
-    results, current_time = compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot, epochs=1000)
+    results, current_time = compare_models(X_train, y_train, y_train_one_hot, X_test, y_test, y_test_one_hot, epochs=10)
     
     # 打印结果摘要
     print_results_summary(results)
